@@ -1,7 +1,7 @@
 {
   "name": "fivemdevkit",
-  "displayName": "FivemDevKit",
-  "description": "FiveMDevKit is a lightweight VS Code extension that streamlines FiveM development by providing intelligent autocompletion, context-aware code snippets, and efficient resource management for both client and server scripts.",
+  "displayName": "FivemDevKit, by Dotsoft",
+  "description": "FiveMDevKit is a lightweight VS Code extension that streamlines FiveM development by providing intelligent autocompletion, context-aware code snippets, and efficient resource management for both client and server scripts in JS/TS.",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.97.0"

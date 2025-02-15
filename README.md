@@ -1,71 +1,79 @@
-# fivemdevkit README
+# FiveMDevKit
 
-This is the README for your extension "fivemdevkit". After writing up a brief description, we recommend including the following sections.
+**FiveMDevKit** is a Visual Studio Code extension that streamlines FiveM development for JavaScript and TypeScript. It provides robust IntelliSense support for FiveM natives and common events, automatically transforming native names to a clean, PascalCase format with detailed parameter hints and documentation.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- **Intelligent Auto-Completion**  
+  Provides suggestions for all FiveM natives from the official documentation. Natives are displayed in PascalCase with parameter hints and documentation extracted from FiveM's JSON data.
 
-For example if there is an image subfolder under your extension project workspace:
+- **Custom Event Completions**  
+  Supports common FiveM events like `onNet`, `emitNet`, `on`, `registerNetEvent`, and `triggerEvent` with snippets that insert boilerplate code.
 
-\!\[feature X\]\(images/feature-x.png\)
+- **Snippet Insertion with Parameter Types**  
+  When a native is selected, a multi-line snippet is inserted with each parameter on its own line and type annotations. For example:
+  ```js
+  TriggerMusicEvent(
+      eventName: string
+  );
+  ```
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- **Integrated Documentation**  
+  Hover over completion items to see detailed information, including native module, hash, parameters, and return type(s).
+
+> **Example:**  
+> ![Completion Example](images/completion-example.png)
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- **Visual Studio Code** (v1.97.0 or later recommended)
+- A valid `natives.json` file placed in the extension's `data` folder.  
+  *(Use the provided fetch script to update this file with the latest FiveM natives from [https://runtime.fivem.net/doc/natives.json](https://runtime.fivem.net/doc/natives.json).)*
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+At this stage, **FiveMDevKit** does not include custom configuration settings. Future releases may add settings to customize behavior, such as toggling certain completions or adjusting snippet formats.
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- **Event Completion Display:**  
+  Some native names may not convert perfectly to PascalCase if the naming is inconsistent. Improvements to the name conversion algorithm are planned.
+- **Performance:**  
+  If your `natives.json` file grows very large, there might be a slight delay during activation. Consider filtering or optimizing the data for production use.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
 ### 1.0.0
+- Initial release with full IntelliSense support for FiveM natives and common events.
+- Snippets for events like `onNet`, `emitNet`, `on`, `registerNetEvent`, and `triggerEvent`.
+- Integrated documentation for each native, including parameters, return types, and native hash.
 
-Initial release of ...
+## How to Use
 
-### 1.0.1
+1. **Install the Extension:**  
+   Download and install the extension from the [Visual Studio Code Marketplace](https://marketplace.visualstudio.com/) or install from the VSIX package.
 
-Fixed issue #.
+2. **Ensure Data Availability:**  
+   Verify that your `natives.json` file is up-to-date in the `data` folder. Use the provided fetch script to update it if necessary.
 
-### 1.1.0
+3. **Start Coding:**  
+   Open a JavaScript or TypeScript file in VS Code. Begin typing a native (e.g., `TriggerMusicEvent`) or a common event (e.g., `onNet`) to see suggestions and snippets.
+   
+4. **View Documentation:**  
+   Hover over any completion item to view details about the native, including its parameters and expected return type.
 
-Added features X, Y, and Z.
+## Additional Resources
 
----
+- [FiveM Documentation](https://docs.fivem.net/natives)
+- [Visual Studio Code API](https://code.visualstudio.com/api)
+- [Language Server Protocol](https://microsoft.github.io/language-server-protocol/)
 
-## Following extension guidelines
+## Contributing
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+Contributions are welcome! If you have ideas for improvements, bug fixes, or additional features, please feel free to open issues or submit pull requests.
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+## License
 
-## Working with Markdown
+This extension is released under the MIT License. See [LICENSE](LICENSE) for details.
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**Enjoy FiveMDevKit and happy coding!**
