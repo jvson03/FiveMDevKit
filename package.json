@@ -4,6 +4,7 @@
   "description": "FiveMDevKit is a lightweight VS Code extension that streamlines FiveM development by providing intelligent autocompletion, context-aware code snippets, and efficient resource management for both client and server scripts in JS/TS.",
   "publisher": "dotsoft",
   "version": "0.0.1",
+  "icon": "logo.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/jvson03/FiveMDevKit.git"
