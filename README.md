@@ -69,8 +69,4 @@ At this stage, **FiveMDevKit** does not include custom configuration settings. F
 
 Contributions are welcome! If you have ideas for improvements, bug fixes, or additional features, please feel free to open issues or submit pull requests.
 
-## License
-
-This extension is released under the MIT License. See [LICENSE](LICENSE) for details.
-
 **Enjoy FiveMDevKit and happy coding!**
