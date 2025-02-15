@@ -19,53 +19,47 @@ interface FiveMNative {
 	module?: string;
 }
 
-export function activate(context: vscode.ExtensionContext) {
-	// Load the natives.json file from the data folder in the extension package
-	const nativesFile = path.join(context.extensionPath, "data", "natives.json");
-	let allNatives: FiveMNative[] = [];
-
-	if (fs.existsSync(nativesFile)) {
-		const rawData = fs.readFileSync(nativesFile, "utf-8");
-		const parsed = JSON.parse(rawData);
-		allNatives = parseNatives(parsed);
+/**
+ * Converts an all-uppercase-with-underscores name (e.g. "TRIGGER_MUSIC_EVENT")
+ * to PascalCase ("TriggerMusicEvent"). If the name doesn't match that pattern,
+ * we just uppercase the first letter and leave the rest as-is ("triggerEvent" -> "TriggerEvent").
+ */
+function toPascalCase(s: string): string {
+	// Check if string is uppercase/underscore style (like "TRIGGER_SIREN")
+	if (/^[A-Z0-9_]+$/.test(s)) {
+		// Split on underscores, capitalize each chunk, lowercase the rest
+		return s
+			.split("_")
+			.map(
+				(chunk) =>
+					chunk.charAt(0).toUpperCase() + chunk.slice(1).toLowerCase()
+			)
+			.join("");
 	} else {
-		vscode.window.showWarningMessage(
-			'FiveM natives.json not found. Please run "npm run fetch-natives" or place the file in the data folder.'
-		);
+		// Just uppercase the first letter, leave the rest as-is
+		return s.charAt(0).toUpperCase() + s.slice(1);
 	}
-
-	// Register the auto-completion provider for JavaScript and TypeScript
-	// No trigger characters => suggestions appear on every keystroke
-	const completionProvider = vscode.languages.registerCompletionItemProvider(
-		["javascript", "typescript"],
-		new FiveMCompletionProvider(allNatives)
-	);
-
-	// Register the go-to definition provider
-	const definitionProvider = vscode.languages.registerDefinitionProvider(
-		["javascript", "typescript"],
-		new FiveMDefinitionProvider(allNatives)
-	);
-
-	// Register commands (e.g. Hello World, Debug Resource)
-	const helloCmd = vscode.commands.registerCommand("fivemdevkit.helloWorld", () => {
-		vscode.window.showInformationMessage("Hello from FiveMDevKit!");
-	});
-	const debugCmd = vscode.commands.registerCommand("fivemdevkit.debugResource", () => {
-		vscode.window.showInformationMessage("Debug Resource: Not implemented yet!");
-	});
-
-	context.subscriptions.push(completionProvider, definitionProvider, helloCmd, debugCmd);
-
-	vscode.window.showInformationMessage("FiveMDevKit is now active!");
-}
-
-export function deactivate() {
-	// Cleanup logic if needed
 }
 
 /**
- * Flatten the nested JSON (modules -> hashes) into a flat array of FiveMNative objects.
+ * Maps FiveM param types to a more JavaScript-friendly type (e.g. "char*" -> "string").
+ */
+function mapType(type: string): string {
+	switch (type.toLowerCase()) {
+		case "char*":
+			return "string";
+		case "float":
+		case "int":
+			return "number";
+		case "bool":
+			return "boolean";
+		default:
+			return type.toLowerCase();
+	}
+}
+
+/**
+ * Parses the nested natives JSON into a flat array of FiveMNative objects.
  */
 function parseNatives(nativesData: any): FiveMNative[] {
 	const result: FiveMNative[] = [];
@@ -78,7 +72,6 @@ function parseNatives(nativesData: any): FiveMNative[] {
 					name: nativeDef.name,
 					hash: nativeHash,
 					params: nativeDef.params || [],
-					// 'results' can be string or array in the JSON
 					results: nativeDef.results,
 					description: nativeDef.description || "",
 					module: moduleName,
@@ -91,7 +84,7 @@ function parseNatives(nativesData: any): FiveMNative[] {
 
 /**
  * Completion Provider for FiveM natives.
- * Displays a list of known natives as IntelliSense suggestions.
+ * Transforms all names to PascalCase for display and snippet insertion.
  */
 class FiveMCompletionProvider implements vscode.CompletionItemProvider {
 	constructor(private natives: FiveMNative[]) {}
@@ -101,46 +94,54 @@ class FiveMCompletionProvider implements vscode.CompletionItemProvider {
 		position: vscode.Position
 	): vscode.CompletionItem[] {
 		return this.natives.map((native) => {
+			// Convert original name (e.g. "TRIGGER_MUSIC_EVENT" or "triggerEvent") to PascalCase
+			const funcName = toPascalCase(native.name);
+
 			const item = new vscode.CompletionItem(
-				native.name,
+				funcName,
 				vscode.CompletionItemKind.Function
 			);
-
 			item.detail = `${native.module} - Hash: ${native.hash}`;
 
-			// If 'results' is a string, wrap it in an array; if it's already an array, use it.
-			let resultsArray: string[];
-			if (typeof native.results === "string") {
-				resultsArray = [native.results];
-			} else if (Array.isArray(native.results)) {
-				resultsArray = native.results;
-			} else {
-				resultsArray = [];
-			}
+			// Process return value(s)
+			const returns = Array.isArray(native.results)
+				? native.results.join(" | ")
+				: native.results || "void";
 
-			const returns = resultsArray.length > 0 ? resultsArray.join(" | ") : "void";
-			const params = native.params?.map((p) => `${p.type} ${p.name}`).join(", ") || "";
+			// Build a parameter list for docs
+			const paramList = native.params
+				? native.params
+						.map((p) => `${mapType(p.type)} ${p.name}`)
+						.join(", ")
+				: "";
 			const docString = `
-**Description**: ${native.description || "No description"}  
-**Parameters**: \`${params}\`  
-**Returns**: \`${returns}\`  
-**Module**: \`${native.module}\`
-**Hash**: \`${native.hash}\`
+**Description:** ${native.description || "No description"}
+**Parameters:** \`${paramList}\`
+**Returns:** \`${returns}\`
+**Module:** \`${native.module}\`
+**Hash:** \`${native.hash}\`
 			`;
 			item.documentation = new vscode.MarkdownString(docString);
 
-			// Insert snippet with parameter placeholders
+			// Build a multi-line snippet with typed parameters
+			const snippet = new vscode.SnippetString(`${funcName}(`);
 			if (native.params && native.params.length > 0) {
-				const snippet = new vscode.SnippetString(`${native.name}(`);
 				for (let i = 0; i < native.params.length; i++) {
-					snippet.appendPlaceholder(native.params[i].name);
+					const param = native.params[i];
+					snippet.appendText("\n\t");
+					snippet.appendPlaceholder(
+						`${param.name}: ${mapType(param.type)}`
+					);
 					if (i < native.params.length - 1) {
-						snippet.appendText(", ");
+						snippet.appendText(",");
 					}
 				}
+				snippet.appendText("\n)");
+			} else {
 				snippet.appendText(")");
-				item.insertText = snippet;
 			}
+			snippet.appendText(";");
+			item.insertText = snippet;
 
 			return item;
 		});
@@ -148,30 +149,108 @@ class FiveMCompletionProvider implements vscode.CompletionItemProvider {
 }
 
 /**
- * Definition Provider for FiveM natives.
- * Optionally opens docs in a browser or returns a location.
+ * Completion Provider for common FiveM events (onNet, emitNet, etc.).
  */
-class FiveMDefinitionProvider implements vscode.DefinitionProvider {
-	constructor(private natives: FiveMNative[]) {}
+class FiveMEventsCompletionProvider implements vscode.CompletionItemProvider {
+	public provideCompletionItems(): vscode.CompletionItem[] {
+		const completions: vscode.CompletionItem[] = [];
 
-	public provideDefinition(
-		document: vscode.TextDocument,
-		position: vscode.Position
-	): vscode.Definition | undefined {
-		const range = document.getWordRangeAtPosition(position);
-		if (!range) {
-			return;
-		}
-
-		const word = document.getText(range);
-		const match = this.natives.find(
-			(n) => n.name.toLowerCase() === word.toLowerCase()
+		// onNet
+		const onNetItem = new vscode.CompletionItem("onNet", vscode.CompletionItemKind.Function);
+		onNetItem.detail = "FiveM event listener (client/server)";
+		onNetItem.documentation = new vscode.MarkdownString(
+			"**onNet(eventName, handler)**\n\nListens for server-to-client or client-to-server events."
 		);
-		if (match) {
-			// For now, open the official docs page in the browser:
-			const docUrl = `https://docs.fivem.net/natives/?_0x${match.hash?.slice(2) || ""}`;
-			vscode.env.openExternal(vscode.Uri.parse(docUrl));
-		}
-		return undefined;
+		onNetItem.insertText = new vscode.SnippetString("onNet('${1:eventName}', (${2:args}) => {\n\t$0\n});");
+		completions.push(onNetItem);
+
+		// emitNet
+		const emitNetItem = new vscode.CompletionItem("emitNet", vscode.CompletionItemKind.Function);
+		emitNetItem.detail = "FiveM event emitter (client/server)";
+		emitNetItem.documentation = new vscode.MarkdownString(
+			"**emitNet(eventName, target, ...args)**\n\nEmits an event from the client to the server or vice versa."
+		);
+		emitNetItem.insertText = new vscode.SnippetString("emitNet('${1:eventName}', ${2:target}, ${3:...args});");
+		completions.push(emitNetItem);
+
+		// on
+		const onItem = new vscode.CompletionItem("on", vscode.CompletionItemKind.Function);
+		onItem.detail = "Generic event listener";
+		onItem.documentation = new vscode.MarkdownString(
+			"**on(eventName, handler)**\n\nListens for events on the same side (client or server)."
+		);
+		onItem.insertText = new vscode.SnippetString("on('${1:eventName}', (${2:args}) => {\n\t$0\n});");
+		completions.push(onItem);
+
+		// registerNetEvent
+		const registerNetEventItem = new vscode.CompletionItem("registerNetEvent", vscode.CompletionItemKind.Function);
+		registerNetEventItem.detail = "Register a network event";
+		registerNetEventItem.documentation = new vscode.MarkdownString(
+			"**registerNetEvent(eventName)**\n\nRegisters a network event to be handled by the client or server."
+		);
+		registerNetEventItem.insertText = new vscode.SnippetString("registerNetEvent('${1:eventName}');");
+		completions.push(registerNetEventItem);
+
+		// triggerEvent
+		const triggerEventItem = new vscode.CompletionItem("triggerEvent", vscode.CompletionItemKind.Function);
+		triggerEventItem.detail = "Trigger a local event";
+		triggerEventItem.documentation = new vscode.MarkdownString(
+			"**triggerEvent(eventName, ...args)**\n\nTriggers an event on the local side (client or server)."
+		);
+		triggerEventItem.insertText = new vscode.SnippetString("triggerEvent('${1:eventName}', ${2:...args});");
+		completions.push(triggerEventItem);
+
+		return completions;
 	}
+}
+
+/**
+ * Activates the extension.
+ */
+export function activate(context: vscode.ExtensionContext) {
+	const nativesFile = path.join(context.extensionPath, "data", "natives.json");
+	let allNatives: FiveMNative[] = [];
+
+	if (fs.existsSync(nativesFile)) {
+		try {
+			const rawData = fs.readFileSync(nativesFile, "utf-8");
+			const parsed = JSON.parse(rawData);
+			allNatives = parseNatives(parsed);
+		} catch (e) {
+			vscode.window.showErrorMessage("Failed to parse natives.json");
+		}
+	} else {
+		vscode.window.showWarningMessage("natives.json not found in the data folder.");
+	}
+
+	// Register the completion provider for FiveM natives.
+	const nativesProvider = vscode.languages.registerCompletionItemProvider(
+		["javascript", "typescript"],
+		new FiveMCompletionProvider(allNatives)
+	);
+
+	// Register the completion provider for FiveM events.
+	const eventsProvider = vscode.languages.registerCompletionItemProvider(
+		["javascript", "typescript"],
+		new FiveMEventsCompletionProvider()
+	);
+
+	// Register commands (e.g. Hello World).
+	const helloCmd = vscode.commands.registerCommand("fivemdevkit.helloWorld", () => {
+		vscode.window.showInformationMessage("Hello from FiveMDevKit!");
+	});
+	const debugCmd = vscode.commands.registerCommand("fivemdevkit.debugResource", () => {
+		vscode.window.showInformationMessage("Debug Resource: Not implemented yet!");
+	});
+
+	context.subscriptions.push(nativesProvider, eventsProvider, helloCmd, debugCmd);
+
+	vscode.window.showInformationMessage("FiveMDevKit is now active!");
+}
+
+/**
+ * Deactivates the extension.
+ */
+export function deactivate() {
+	// Cleanup if needed.
 }
