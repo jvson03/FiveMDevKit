@@ -21,9 +21,6 @@
 - **Integrated Documentation**  
   Hover over completion items to see detailed information, including native module, hash, parameters, and return type(s).
 
-> **Example:**  
-> ![Completion Example](images/completion-example.png)
-
 ## Requirements
 
 - **Visual Studio Code** (v1.97.0 or later recommended)
