@@ -1,0 +1,17 @@
+{
+	"FiveM Resource Boilerplate": {
+		"prefix": "fivemResource",
+		"body": [
+			"/**",
+			" * Resource: $1",
+			" * Description: $2",
+			" */",
+			"on('onResourceStart', (resourceName) => {",
+			"    if (GetCurrentResourceName() === resourceName) {",
+			"        console.log('Resource started:', resourceName);",
+			"    }",
+			"});"
+		],
+		"description": "Basic FiveM resource snippet"
+	}
+}
